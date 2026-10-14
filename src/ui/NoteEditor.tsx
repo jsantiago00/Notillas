@@ -11,7 +11,8 @@ import { newPage } from '../model/memoryNotes'
 import type { NoteModel } from '../model/note'
 import type { Background } from '../model/types'
 import { BackgroundPanel, type Scope } from './BackgroundPanel'
-import { ConfirmDialog } from './Dialog'
+import { ConfirmDialog, Modal } from './Dialog'
+import { ExportDialog } from './ExportDialog'
 import { Icon } from './Icon'
 import { SelectionBar } from './SelectionBar'
 import { Toolbar } from './Toolbar'
@@ -51,6 +52,8 @@ export function NoteEditor({ note, title, onRename, status, actions = [], onBoar
   const [bgOpen, setBgOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const [confirmPage, setConfirmPage] = useState<number | null>(null)
+  const [exporting, setExporting] = useState(false)
+  const [shortcuts, setShortcuts] = useState(false)
   const [bg, setBg] = useState<Background | null>(null)
   const [scope, setScope] = useState<Scope>('page')
   const [hist, setHist] = useState({ undo: false, redo: false })
@@ -169,7 +172,9 @@ export function NoteEditor({ note, title, onRename, status, actions = [], onBoar
     { label: 'Fondo de la hoja', icon: 'sheet', run: () => setBgOpen(true) },
     { label: 'Agregar página', icon: 'pagePlus', run: addPage },
     ...(page.total > 1 ? [{ label: 'Borrar esta página', icon: 'trash' as const, run: () => setConfirmPage(page.index) }] : []),
+    { label: 'Exportar (PDF o PNG)…', icon: 'download', run: () => setExporting(true) },
     ...actions,
+    ...(mode === 'desktop' ? [{ label: 'Atajos de teclado', icon: 'info' as const, run: () => setShortcuts(true) }] : []),
     { label: showDebug ? 'Ocultar datos del lápiz' : 'Datos del lápiz', icon: 'info', run: () => setShowDebug((v) => !v) },
   ]
 
@@ -281,6 +286,32 @@ export function NoteEditor({ note, title, onRename, status, actions = [], onBoar
             <span>Tocá la hoja para ver los datos del puntero</span>
           )}
         </div>
+      )}
+      {exporting && <ExportDialog pages={note.pages} current={page.index} title={title} onClose={() => setExporting(false)} />}
+      {shortcuts && (
+        <Modal onClose={() => setShortcuts(false)} label="Atajos de teclado">
+          <h2 className="dialog-title">Atajos de teclado</h2>
+          <dl className="shortcuts">
+            <dt>P · H · E · L</dt>
+            <dd>Lapicera, resaltador, goma, lazo</dd>
+            <dt>Ctrl + Z</dt>
+            <dd>Deshacer</dd>
+            <dt>Ctrl + Shift + Z · Ctrl + Y</dt>
+            <dd>Rehacer</dd>
+            <dt>Supr · Esc</dt>
+            <dd>Borrar la selección · soltarla</dd>
+            <dt>Espacio + arrastrar</dt>
+            <dd>Desplazar la hoja</dd>
+            <dt>Ctrl + rueda · Ctrl + + / − / 0</dt>
+            <dd>Zoom · ajustar al ancho</dd>
+          </dl>
+          <p className="muted dialog-body">En la tablet: dos dedos tocando a la vez deshacen; el botón del S Pen borra.</p>
+          <div className="dialog-actions">
+            <button className="btn btn-primary-solid" onClick={() => setShortcuts(false)}>
+              Listo
+            </button>
+          </div>
+        </Modal>
       )}
       {confirmPage !== null && (
         <ConfirmDialog

@@ -51,6 +51,8 @@ export class NoteSync {
   private written = new Map<string, string>()
   private writtenOrder = ''
   private pagesDirty = false
+  /** Mientras se aplican páginas que llegaron de Firestore, sus eventos no se vuelven a escribir */
+  private applyingRemote = false
   private flushTimer = 0
   private thumbTimer = 0
   private unsubModel: (() => void) | null = null
@@ -124,36 +126,55 @@ export class NoteSync {
     // Con cambios locales de páginas sin escribir, lo local manda: el próximo snapshot
     // (ya con lo nuestro) vuelve a reconciliar
     if (this.model && this.pagesDirty) return
-    const ordered = meta.pageIds.filter((id) => this.pageDocs.has(id))
+    // Una página puede figurar en la nota antes de que llegue su documento (los snapshots de la
+    // nota y de las páginas no llegan juntos): si ya la tenemos en el modelo, se conserva
+    const known = (id: string) => this.pageDocs.has(id) || !!this.model?.page(id)
+    const ordered = meta.pageIds.filter(known)
     // Páginas que existen pero no figuran en el orden (otro dispositivo a mitad de escribir): al final
     for (const p of [...this.pageDocs.values()].sort((a, b) => a.createdAt - b.createdAt)) {
       if (!ordered.includes(p.id)) ordered.push(p.id)
     }
     if (!ordered.length) return
 
-    for (const id of ordered) this.written.set(id, JSON.stringify(this.pageDocs.get(id)!.background))
+    for (const id of ordered) {
+      const d = this.pageDocs.get(id)
+      if (d) this.written.set(id, JSON.stringify(d.background))
+    }
+    // Lo que ya no está en Firestore se olvida (sin volver a borrarlo)
+    for (const id of [...this.written.keys()]) if (!ordered.includes(id)) this.written.delete(id)
     this.writtenOrder = ordered.join(',')
 
     if (!this.model) {
       this.model = new NoteModel(ordered.map((id) => this.toPage(id)))
       this.unsubModel = this.model.subscribe((e) => {
         if (e.type === 'commit') this.queueStrokes(e.changes)
-        else if (e.type === 'pages') this.queuePages()
+        else if (e.type === 'pages' && !this.applyingRemote) this.queuePages()
       })
     } else {
       const current = this.model.pages
       const same =
         current.length === ordered.length &&
-        current.every((p, i) => p.id === ordered[i] && JSON.stringify(p.background) === this.written.get(p.id))
-      if (!same) this.model.replacePages(ordered.map((id) => this.toPage(id)))
+        current.every((p, i) => {
+          const d = this.pageDocs.get(p.id)
+          return p.id === ordered[i] && (!d || JSON.stringify(p.background) === JSON.stringify(d.background))
+        })
+      if (!same) {
+        this.applyingRemote = true
+        try {
+          this.model.replacePages(ordered.map((id) => this.toPage(id)))
+        } finally {
+          this.applyingRemote = false
+        }
+      }
     }
     this.syncStrokeSubs(ordered)
     this.maybeReady()
   }
 
   private toPage(id: string): Page {
-    const d = this.pageDocs.get(id)!
     const existing = this.model?.page(id)
+    const d = this.pageDocs.get(id)
+    if (!d) return existing!
     return { id, width: d.width, height: d.height, background: d.background, strokes: existing?.strokes ?? [] }
   }
 

@@ -20,6 +20,7 @@ export const LINE_COLORS = [
 export const PAPERS = [
   { label: 'Blanco', value: '#ffffff' },
   { label: 'Crema', value: '#fbf5e6' },
+  { label: 'Oscuro', value: '#26272b' },
 ] as const
 
 export const BACKGROUND_TYPES: { type: BackgroundType; label: string }[] = [
@@ -59,4 +60,20 @@ export function saveLastBackground(bg: Background) {
 
 export function sameBackground(a: Background, b: Background): boolean {
   return a.type === b.type && a.spacing === b.spacing && a.color === b.color && a.paper === b.paper
+}
+
+/** Luminancia relativa (0 = negro, 1 = blanco) de un color #rrggbb. */
+export function luminance(hex: string): number {
+  const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex)
+  if (!m) return 1
+  const [r, g, b] = [m[1], m[2], m[3]].map((h) => {
+    const c = parseInt(h, 16) / 255
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4
+  })
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b
+}
+
+/** Sobre papel oscuro, la tinta casi negra se dibuja clara (si no, no se vería). */
+export function inkColor(color: string, paper: string): string {
+  return luminance(paper) < 0.1 && luminance(color) < 0.05 ? '#ececec' : color
 }

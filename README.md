@@ -2,7 +2,18 @@
 
 PWA de notas a mano alzada pensada para usar con lápiz. Funciona en celular, tablet y compu, y sincroniza tus notas entre dispositivos con Firebase.
 
-> **Estado:** etapa 6 de 7 (reconocimiento de formas: dejá el lápiz quieto al final del trazo). El plan completo está en [PLAN.md](PLAN.md).
+> **Estado:** las 7 etapas del plan están hechas. El plan completo está en [PLAN.md](PLAN.md).
+
+## Qué hace
+
+- **Lienzo con lápiz:** presión real (S Pen, Apple Pencil, Surface), baja latencia con eventos coalescidos y predichos, rechazo de palma. Con mouse o dedo la presión se simula.
+- **Gestos:** dos dedos desplazan y hacen zoom (con inercia); un toque con dos dedos deshace. Si nunca usaste un lápiz en ese dispositivo, el dedo dibuja; cuando aparece uno, el dedo pasa a desplazar (se cambia con el botón de la mano).
+- **Herramientas:** lapicera, resaltador, goma por trazo o por área (también con el botón del S Pen), lazo para mover, escalar, recolorear, duplicar y borrar; deshacer y rehacer.
+- **Formas:** dejá el lápiz quieto medio segundo al final del trazo y se convierte en línea, flecha, arco, círculo, elipse, triángulo, rectángulo o polígono. Sin levantar el lápiz la podés seguir ajustando.
+- **Hojas:** A4 apiladas en scroll vertical, lisas, rayadas, cuadriculadas o punteadas; papel blanco, crema u oscuro.
+- **Notas y carpetas** sincronizadas en tiempo real entre dispositivos, también sin conexión.
+- **Exportar:** PDF vectorial de toda la nota o PNG de una página, con o sin fondo; en el celular, con el menú de compartir.
+- **Atajos** en la compu: P, H, E, L (herramientas), Ctrl+Z / Ctrl+Shift+Z, Supr, Esc, espacio + arrastrar y Ctrl + rueda. Están en el menú ⋯ → «Atajos de teclado».
 
 ## Requisitos
 

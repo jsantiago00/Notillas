@@ -322,7 +322,7 @@ export class Board implements InputSink {
       last === changes[0].after[0] &&
       !this.inkPreviewed &&
       !this.dirtyInk &&
-      this.renderer.appendStroke(this.vp, this.rects[idx], last)
+      this.renderer.appendStroke(this.vp, this.rects[idx], last, this.note.pages[idx].background.paper)
     ) {
       return
     }
@@ -411,6 +411,7 @@ export class Board implements InputSink {
       live: {
         tool: inkTool,
         opacity: inkTool === 'highlighter' ? HIGHLIGHTER_OPACITY : 1,
+        paper: this.note.pages[page].background.paper,
         page,
         rect,
         pts: [wx - rect.x, wy - rect.y, s.p],
@@ -671,7 +672,7 @@ export class Board implements InputSink {
     if (sel) {
       const drag = [...this.sessions.values()].find((s): s is DragSession => s.kind === 'drag')
       const strokes = this.note.pages[sel.page].strokes.filter((s) => sel.ids.has(s.id))
-      o.selection = { rect: this.rects[sel.page], bbox: sel.bbox, strokes, transform: drag?.transform }
+      o.selection = { rect: this.rects[sel.page], paper: this.note.pages[sel.page].background.paper, bbox: sel.bbox, strokes, transform: drag?.transform }
     }
     if (this.eraserCursor) o.eraser = { ...this.eraserCursor, r: this.opts.tools().eraser.size }
     return o

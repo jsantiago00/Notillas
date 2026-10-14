@@ -1,3 +1,4 @@
+import { inkColor } from '../model/background'
 import type { Page } from '../model/types'
 import { drawPageBackground } from './backgrounds'
 import { strokePath } from './strokeOutline'
@@ -20,6 +21,8 @@ export function renderPage(page: Page, { scale, background }: RenderOptions): HT
   const ctx = canvas.getContext('2d')!
   ctx.setTransform(scale, 0, 0, scale, 0, 0)
   if (background) drawPageBackground(ctx, page.background, page.width, page.height, scale)
+  // Sin fondo, la tinta va con sus colores originales (queda sobre blanco o transparente)
+  const paper = background ? page.background.paper : '#ffffff'
   ctx.beginPath()
   ctx.rect(0, 0, page.width, page.height)
   ctx.clip()
@@ -27,7 +30,7 @@ export function renderPage(page: Page, { scale, background }: RenderOptions): HT
     for (const s of page.strokes) {
       if (s.tool !== pass) continue
       ctx.globalAlpha = s.opacity
-      ctx.fillStyle = s.color
+      ctx.fillStyle = inkColor(s.color, paper)
       ctx.fill(strokePath(s))
     }
   }

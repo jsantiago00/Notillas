@@ -49,6 +49,7 @@ export default defineConfig(({ mode }) => ({
     }),
   ],
   server: { host: mode === 'lan' ? true : undefined },
-  build: { target: 'es2022', sourcemap: true },
+  // El SDK de Firestore solo ya pesa ~540 kB (se carga después del login); jsPDF, al exportar
+  build: { target: 'es2022', sourcemap: true, chunkSizeWarningLimit: 650 },
   test: { environment: 'node', include: ['src/**/*.test.ts'] },
 }))

@@ -18,9 +18,9 @@
 | 4. Herramientas: goma, resaltador, lazo y deshacer | ✅ Hecha |
 | 5. Persistencia y sincronización con Firestore | ✅ Hecha |
 | 6. Reconocimiento de formas | ✅ Hecha (a confirmar en la tablet) |
-| 7. Exportar (PNG/PDF) y pulido | ⏳ Sigue esta |
+| 7. Exportar (PNG/PDF) y pulido | ✅ Hecha (a confirmar en la tablet) |
 
-Actualizá esta tabla en el mismo commit que cierra cada etapa.
+Actualizá esta tabla en el mismo commit que cierra cada etapa. Las etapas 4 a 7 se hicieron de corrido a pedido del usuario; falta su prueba en la tablet y el celular.
 
 ## Cómo trabajar (acordado con el usuario)
 
@@ -50,6 +50,9 @@ Actualizá esta tabla en el mismo commit que cierra cada etapa.
   - **Botón del S Pen:** Chrome lo informa como botón 2 (barril) o como «clic derecho». Mientras está apretado, la herramienta pasa a ser la goma. La punta trasera de lápices tipo Surface llega como `buttons & 32`.
 - **Firebase Storage no se usa** (exige plan Blaze). Las miniaturas van como un WebP chico en el documento de la nota.
 - **Sincronización:** todo cambio de trazos pasa por `NoteModel` (evento `commit` con el cambio neto); `NoteSync` lo escribe en lotes. Lo remoto entra con `applyRemote` (no va al historial). El eco propio se reconoce por la firma del trazo.
+- **Papel oscuro:** la tinta casi negra se dibuja clara (`inkColor` en `model/background.ts`), en pantalla, miniaturas y exportación con fondo.
+- **PDF:** con el `context2d` de jsPDF (mismo código de fondos); la opacidad va con `GState` porque `globalAlpha` no se aplica ahí. Nombres de archivo sin tildes.
+- **Carga diferida:** Home, el editor y la nota de prueba son `lazy` (el login no trae Firestore); jsPDF se importa al exportar.
 - **Sin índices compuestos:** las consultas ordenan por un solo campo y el resto se filtra en el cliente.
 - **Probar la sincronización:** con los emuladores (`npm run emulators` y `npm run dev:emu`); con `VITE_USE_EMULATORS=1` existe `signInForTests` en `auth.ts` y `window.__notillas` en desarrollo.
 
@@ -73,7 +76,8 @@ src/
               renderPage.ts (página fuera de pantalla: miniaturas y PNG)
   recognition/ geom.ts, fit.ts (recta, círculo, elipse), index.ts (recognize, adjustShape; +test con
               formas sintéticas y trazos que no deben reconocerse), recognizer.ts (enchufe al lienzo)
-  ui/         Login, Home (lista, carpetas, tarjetas), NoteRoute (nota de Firestore), Dialog, SyncBadge,
+  export/     exporters.ts (+test: PNG a 2×, PDF vectorial con jsPDF cargado bajo demanda, compartir o descargar)
+  ui/         Login, Home (lista, carpetas, tarjetas), ExportDialog, NoteRoute (nota de Firestore), Dialog, SyncBadge,
               NoteEditor (+ menú ⋯ y título), Toolbar (+ opciones), SelectionBar, MemoryNote, BackgroundPanel, Splash, SetupMissing, AccountButton, ThemeButton, UpdatePrompt, Icon
   App.tsx     rutas (/, /nota/:id, /prueba) y puerta de login
 firestore.rules, firestore.indexes.json, firebase.json

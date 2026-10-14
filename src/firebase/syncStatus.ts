@@ -32,5 +32,5 @@ export function trackWrite(w: 'queued' | 'idle' | Promise<unknown>) {
   if (w === 'idle') return useSyncState.setState({ queued: false })
   useSyncState.setState((s) => ({ inFlight: s.inFlight + 1 }))
   // La promesa resuelve cuando el servidor confirma (sin conexión, recién al volver)
-  w.catch(() => undefined).finally(() => useSyncState.setState((s) => ({ inFlight: Math.max(0, s.inFlight - 1) })))
+  w.catch((e) => console.error('No se pudo guardar:', e)).finally(() => useSyncState.setState((s) => ({ inFlight: Math.max(0, s.inFlight - 1) })))
 }

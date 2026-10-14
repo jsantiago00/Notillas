@@ -42,18 +42,29 @@ export function outlineOf(s: InkLike, last: boolean): number[][] {
   return getStroke(toTriples(s.pts), strokeOptions(s.size, s.simulated, last, s.tool))
 }
 
+/** Lo mínimo de un contexto de dibujo: lo cumplen Path2D, el canvas y el de jsPDF. */
+export interface PathSink {
+  moveTo(x: number, y: number): void
+  quadraticCurveTo(cx: number, cy: number, x: number, y: number): void
+  closePath(): void
+}
+
 /** Polígono suavizado con curvas cuadráticas entre puntos medios. */
-export function pathFromOutline(outline: number[][]): Path2D {
-  const path = new Path2D()
+export function traceOutline(sink: PathSink, outline: number[][]) {
   const n = outline.length
-  if (n < 2) return path
-  path.moveTo(outline[0][0], outline[0][1])
+  if (n < 2) return
+  sink.moveTo(outline[0][0], outline[0][1])
   for (let i = 0; i < n; i++) {
     const [x0, y0] = outline[i]
     const [x1, y1] = outline[(i + 1) % n]
-    path.quadraticCurveTo(x0, y0, (x0 + x1) / 2, (y0 + y1) / 2)
+    sink.quadraticCurveTo(x0, y0, (x0 + x1) / 2, (y0 + y1) / 2)
   }
-  path.closePath()
+  sink.closePath()
+}
+
+export function pathFromOutline(outline: number[][]): Path2D {
+  const path = new Path2D()
+  traceOutline(path, outline)
   return path
 }
 

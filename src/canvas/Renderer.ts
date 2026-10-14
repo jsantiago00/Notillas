@@ -1,5 +1,6 @@
 import { bboxIntersects, rectToBBox, type Rect } from '../model/geometry'
 import type { BBox, InkTool, Page, Stroke } from '../model/types'
+import { inkColor } from '../model/background'
 import { drawPageBackground } from './backgrounds'
 import { outlineOf, pathFromOutline, strokePath } from './strokeOutline'
 import type { Camera, Viewport } from './Viewport'
@@ -7,6 +8,8 @@ import type { Camera, Viewport } from './Viewport'
 /** Trazo en curso (o su vista previa): puntos en coordenadas de su página. */
 export interface LiveStroke {
   tool: InkTool
+  /** Color del papel de la página (la tinta negra se aclara sobre papel oscuro) */
+  paper: string
   opacity: number
   rect: Rect
   pts: number[]
@@ -130,11 +133,12 @@ export class Renderer {
       // Caja visible en coordenadas de la página
       const local: BBox = [view.x - r.x, view.y - r.y, view.x + view.w - r.x, view.y + view.h - r.y]
       if (!bboxIntersects(local, [0, 0, r.w, r.h])) continue
+      const paper = pages[i].background.paper
       this.withPage(ctx, vp.cam, r, () => {
         for (const pass of ['highlighter', 'pen'] as const) {
           for (const s of pages[i].strokes) {
             if (s.tool !== pass || hidden?.has(s.id) || !bboxIntersects(s.bbox, local)) continue
-            fillStroke(ctx, s, strokePath(s))
+            fillStroke(ctx, s, strokePath(s), paper)
           }
         }
       })
@@ -144,11 +148,11 @@ export class Renderer {
   }
 
   /** Agrega un trazo de lapicera recién confirmado sin borrar el resto. */
-  appendStroke(vp: Viewport, rect: Rect, stroke: Stroke): boolean {
+  appendStroke(vp: Viewport, rect: Rect, stroke: Stroke, paper: string): boolean {
     // El resaltador va por debajo: hay que redibujar todo
     if (stroke.tool !== 'pen' || !this.inkCam || !sameCam(this.inkCam, vp.cam)) return false
     const ctx = this.inkCtx
-    this.withPage(ctx, vp.cam, rect, () => fillStroke(ctx, stroke, strokePath(stroke)))
+    this.withPage(ctx, vp.cam, rect, () => fillStroke(ctx, stroke, strokePath(stroke), paper))
     return true
   }
 
@@ -180,7 +184,7 @@ export class Renderer {
         ctx.scale(t.k, t.k)
         ctx.translate(-t.ox, -t.oy)
         for (const pass of ['highlighter', 'pen'] as const) {
-          for (const s of sel.strokes) if (s.tool === pass) fillStroke(ctx, s, strokePath(s))
+          for (const s of sel.strokes) if (s.tool === pass) fillStroke(ctx, s, strokePath(s), sel.paper)
         }
         ctx.restore()
       }, false)
@@ -203,7 +207,7 @@ export class Renderer {
     for (const s of strokes) {
       const pts = s.predicted.length ? s.pts.concat(s.predicted) : s.pts
       if (pts.length < 3) continue
-      this.withPage(ctx, cam, s.rect, () => fillStroke(ctx, s, pathFromOutline(outlineOf({ ...s, pts }, false))))
+      this.withPage(ctx, cam, s.rect, () => fillStroke(ctx, s, pathFromOutline(outlineOf({ ...s, pts }, false)), s.paper))
     }
     if (overlay.lasso && overlay.lasso.pts.length >= 4) {
       const { rect, pts } = overlay.lasso
@@ -253,9 +257,9 @@ export class Renderer {
   }
 }
 
-function fillStroke(ctx: CanvasRenderingContext2D, s: { color: string; opacity: number }, path: Path2D) {
+function fillStroke(ctx: CanvasRenderingContext2D, s: { color: string; opacity: number }, path: Path2D, paper: string) {
   ctx.globalAlpha = s.opacity
-  ctx.fillStyle = s.color
+  ctx.fillStyle = inkColor(s.color, paper)
   ctx.fill(path)
   ctx.globalAlpha = 1
 }
@@ -273,7 +277,7 @@ export interface Overlay {
   /** Lazo en curso: polígono en coordenadas de la página (x, y) */
   lasso?: { rect: Rect; pts: number[] }
   /** Selección del lazo, con la transformación en curso si se está moviendo o escalando */
-  selection?: { rect: Rect; bbox: BBox; strokes: Stroke[]; transform?: SelectionTransform }
+  selection?: { rect: Rect; paper: string; bbox: BBox; strokes: Stroke[]; transform?: SelectionTransform }
   /** Círculo de la goma, en píxeles CSS de pantalla */
   eraser?: { x: number; y: number; r: number }
 }
