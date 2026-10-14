@@ -32,7 +32,7 @@ export interface BoardOptions {
 /** Reconocimiento de formas enchufable (etapa 6). */
 export interface Recognizer {
   /** Se llama mientras el lápiz sigue apoyado; si devuelve puntos, el trazo pasa a ser la forma. */
-  hold(pts: readonly number[], size: number): { pts: number[]; adjust?: (x: number, y: number) => number[]; shape: Stroke['shape'] } | null
+  hold(pts: readonly number[]): { pts: number[]; adjust?: (x: number, y: number) => number[]; shape: Stroke['shape'] } | null
 }
 
 interface InkSession {
@@ -461,6 +461,7 @@ export class Board implements InputSink {
       if (session.shape) {
         // Forma reconocida: el lápiz la sigue ajustando hasta que se levanta
         if (session.shape.adjust) l.pts = session.shape.adjust(wx - l.rect.x, wy - l.rect.y)
+        l.simulated = false
       } else {
         for (const s of samples) {
           const [x, y] = this.toPage(l.rect, s)
@@ -530,7 +531,8 @@ export class Board implements InputSink {
       z: nextZ(),
       size: l.size,
       pts: l.pts,
-      simulated: l.simulated || !!session.shape,
+      // Las formas tienen grosor parejo (presión constante, sin simular)
+      simulated: session.shape ? false : l.simulated,
       bbox: [0, 0, 0, 0],
       ...(session.shape ? { shape: session.shape.meta } : {}),
     })
@@ -552,10 +554,11 @@ export class Board implements InputSink {
     session.holdTimer = window.setTimeout(() => {
       if (session.shape || ![...this.sessions.values()].includes(session)) return
       const l = session.live
-      const r = rec.hold(l.pts, l.size)
+      const r = rec.hold(l.pts)
       if (!r) return
       l.pts = r.pts
       l.predicted = []
+      l.simulated = false
       session.shape = { adjust: r.adjust, meta: r.shape }
       this.dirtyLive = true
       this.schedule()

@@ -16,9 +16,9 @@
 | 2. Lienzo: presión, pan/zoom y rechazo de palma | ✅ Hecha |
 | 3. Fondos de hoja | ✅ Hecha |
 | 4. Herramientas: goma, resaltador, lazo y deshacer | ✅ Hecha |
-| 5. Persistencia y sincronización con Firestore | ✅ Hecha (a confirmar en la tablet) |
-| 6. Reconocimiento de formas | ⏳ Sigue esta |
-| 7. Exportar (PNG/PDF) y pulido | — |
+| 5. Persistencia y sincronización con Firestore | ✅ Hecha |
+| 6. Reconocimiento de formas | ✅ Hecha (a confirmar en la tablet) |
+| 7. Exportar (PNG/PDF) y pulido | ⏳ Sigue esta |
 
 Actualizá esta tabla en el mismo commit que cierra cada etapa.
 
@@ -71,6 +71,8 @@ src/
               strokeOutline.ts (perfect-freehand → Path2D), layout.ts (páginas apiladas),
               backgrounds.ts (+test, lisa/rayada/cuadriculada/punteada; también para exportar),
               renderPage.ts (página fuera de pantalla: miniaturas y PNG)
+  recognition/ geom.ts, fit.ts (recta, círculo, elipse), index.ts (recognize, adjustShape; +test con
+              formas sintéticas y trazos que no deben reconocerse), recognizer.ts (enchufe al lienzo)
   ui/         Login, Home (lista, carpetas, tarjetas), NoteRoute (nota de Firestore), Dialog, SyncBadge,
               NoteEditor (+ menú ⋯ y título), Toolbar (+ opciones), SelectionBar, MemoryNote, BackgroundPanel, Splash, SetupMissing, AccountButton, ThemeButton, UpdatePrompt, Icon
   App.tsx     rutas (/, /nota/:id, /prueba) y puerta de login

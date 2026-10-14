@@ -2,7 +2,7 @@
 
 PWA de notas a mano alzada pensada para usar con lápiz. Funciona en celular, tablet y compu, y sincroniza tus notas entre dispositivos con Firebase.
 
-> **Estado:** etapa 5 de 7 (las notas se guardan en Firestore y se sincronizan entre dispositivos, también sin conexión). El plan completo está en [PLAN.md](PLAN.md).
+> **Estado:** etapa 6 de 7 (reconocimiento de formas: dejá el lápiz quieto al final del trazo). El plan completo está en [PLAN.md](PLAN.md).
 
 ## Requisitos
 

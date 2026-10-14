@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { Board } from '../canvas/Board'
+import { shapeRecognizer } from '../recognition/recognizer'
 import type { PointerDebug } from '../canvas/InputController'
 import { dismissPenNotice, notePenSeen, setFingerDraws, useInputPrefs } from '../lib/inputPrefs'
 import { useLayoutMode } from '../lib/layoutMode'
@@ -66,6 +67,7 @@ export function NoteEditor({ note, title, onRename, status, actions = [], onBoar
     let lastDebug = 0
     const board = new Board(root, note, {
       tools: () => useTools.getState(),
+      recognize: shapeRecognizer,
       fingerDraws: () => useInputPrefs.getState().fingerDraws,
       onPenDetected: notePenSeen,
       onZoom: setZoom,
