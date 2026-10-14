@@ -1,5 +1,6 @@
 import { bboxOf, type Rect } from '../model/geometry'
-import type { Page, Stroke } from '../model/types'
+import { newPage } from '../model/memoryNotes'
+import type { Background, Page, Stroke } from '../model/types'
 import { InputController, type InputSink, type PointerDebug, type Sample } from './InputController'
 import { contentRect, layoutPages, pageAt } from './layout'
 import { Renderer, type LiveStroke } from './Renderer'
@@ -12,6 +13,8 @@ export interface BoardOptions {
   /** Cambió el zoom (relativo a «ajustado al ancho»: 1 = 100 %) */
   onZoom?: (relative: number) => void
   onDebug?: (info: PointerDebug) => void
+  /** Cambió la página que está en el centro de la vista, o la cantidad de páginas */
+  onPage?: (index: number, total: number) => void
   pen: { color: string; size: number }
 }
 
@@ -44,6 +47,8 @@ export class Board implements InputSink {
   private inkPreviewed = false
   private lastInkMs = 0
   private lastZoom = 0
+  private lastPage = -1
+  private lastTotal = 0
   private sized = false
   private ro: ResizeObserver
   private readonly off: (() => void)[] = []
@@ -88,6 +93,54 @@ export class Board implements InputSink {
     this.vp.stopInertia()
     this.vp.fitWidth()
     this.viewChanged()
+  }
+
+  /** Índice de la página que ocupa el centro de la vista (o la más cercana). */
+  currentPage(): number {
+    const [, cy] = this.vp.toWorld(this.vp.width / 2, this.vp.height / 2)
+    let best = 0
+    let bestDist = Infinity
+    this.rects.forEach((r, i) => {
+      const d = cy < r.y ? r.y - cy : cy > r.y + r.h ? cy - r.y - r.h : 0
+      if (d < bestDist) {
+        bestDist = d
+        best = i
+      }
+    })
+    return best
+  }
+
+  get pageCount(): number {
+    return this.pages.length
+  }
+
+  background(index: number): Background {
+    return this.pages[index].background
+  }
+
+  /** Cambia el fondo de una página, o de todas. */
+  setBackground(index: number | 'all', bg: Background) {
+    const targets = index === 'all' ? this.pages : [this.pages[index]]
+    for (const p of targets) p.background = { ...bg }
+    this.dirtyView = true
+    this.schedule()
+  }
+
+  /** Agrega una página al final, con el fondo de la última, y la muestra. */
+  addPage() {
+    const last = this.pages[this.pages.length - 1]
+    this.pages.push(newPage(last.background))
+    this.relayout()
+    this.scrollToPage(this.pages.length - 1)
+  }
+
+  scrollToPage(index: number) {
+    const r = this.rects[index]
+    if (!r) return
+    this.vp.stopInertia()
+    this.vp.cam.y = r.y - 24 / this.vp.cam.zoom
+    this.vp.clamp()
+    this.invalidate()
   }
 
   /** Redibuja todo (al volver de segundo plano o si se restauró el contexto). */
@@ -235,7 +288,7 @@ export class Board implements InputSink {
     const moving = this.input.gestureActive || vp.inertiaActive
     if (this.dirtyView) {
       this.dirtyView = false
-      this.renderer.drawBackground(vp, this.rects)
+      this.renderer.drawBackground(vp, this.pages, this.rects)
       // Con mucha tinta, mientras se mueve la vista se desplaza el bitmap; si no, se redibuja
       if (!this.dirtyInk && moving && this.lastInkMs > SLOW_INK_MS && this.renderer.previewInk(vp.cam)) {
         this.inkPreviewed = true
@@ -260,6 +313,13 @@ export class Board implements InputSink {
     if (vp.cam.zoom !== this.lastZoom) {
       this.lastZoom = vp.cam.zoom
       this.opts.onZoom?.(vp.cam.zoom / vp.fitZoom)
+    }
+
+    const page = this.currentPage()
+    if (page !== this.lastPage || this.pages.length !== this.lastTotal) {
+      this.lastPage = page
+      this.lastTotal = this.pages.length
+      this.opts.onPage?.(page, this.pages.length)
     }
 
     // Seguir mientras haya inercia o falte el redibujo nítido

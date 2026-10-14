@@ -1,9 +1,12 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { Board } from '../canvas/Board'
 import type { PointerDebug } from '../canvas/InputController'
 import { dismissPenNotice, notePenSeen, setFingerDraws, useInputPrefs } from '../lib/inputPrefs'
+import { saveLastBackground } from '../model/background'
 import { getMemoryPages } from '../model/memoryNotes'
+import type { Background } from '../model/types'
+import { BackgroundPanel, type Scope } from './BackgroundPanel'
 import { Icon } from './Icon'
 
 const PEN = { color: '#1f1d1a', size: 4 }
@@ -16,6 +19,10 @@ export function NoteEditor() {
   const [showDebug, setShowDebug] = useState(false)
   const [debug, setDebug] = useState<PointerDebug | null>(null)
   const debugOn = useRef(false)
+  const [page, setPage] = useState({ index: 0, total: 1 })
+  const [bgOpen, setBgOpen] = useState(false)
+  const [bg, setBg] = useState<Background | null>(null)
+  const [scope, setScope] = useState<Scope>('page')
   const fingerDraws = useInputPrefs((s) => s.fingerDraws)
   const justDetectedPen = useInputPrefs((s) => s.justDetectedPen)
 
@@ -31,6 +38,7 @@ export function NoteEditor() {
       fingerDraws: () => useInputPrefs.getState().fingerDraws,
       onPenDetected: notePenSeen,
       onZoom: setZoom,
+      onPage: (index, total) => setPage({ index, total }),
       onDebug: (info) => {
         if (!debugOn.current) return
         const now = performance.now()
@@ -52,6 +60,24 @@ export function NoteEditor() {
     return () => clearTimeout(t)
   }, [justDetectedPen])
 
+  // Con el panel abierto, muestra el fondo de la página que está a la vista
+  useEffect(() => {
+    if (bgOpen && boardRef.current) setBg(boardRef.current.background(page.index))
+  }, [bgOpen, page.index])
+
+  const changeBackground = (next: Background) => {
+    setBg(next)
+    boardRef.current?.setBackground(scope === 'all' ? 'all' : page.index, next)
+    saveLastBackground(next)
+  }
+
+  const changeScope = (next: Scope) => {
+    setScope(next)
+    if (next === 'all' && bg) boardRef.current?.setBackground('all', bg)
+  }
+
+  const closeBg = useCallback(() => setBgOpen(false), [])
+
   const fingerLabel = fingerDraws ? 'El dedo dibuja (tocá para que desplace)' : 'El dedo desplaza (tocá para que dibuje)'
 
   return (
@@ -70,6 +96,24 @@ export function NoteEditor() {
             title={fingerLabel}
           >
             <Icon name={fingerDraws ? 'finger' : 'hand'} />
+          </button>
+          <button
+            className={`icon-btn${bgOpen ? ' is-on' : ''}`}
+            data-panel-toggle="bg"
+            onClick={() => setBgOpen((v) => !v)}
+            aria-expanded={bgOpen}
+            aria-label="Fondo de la hoja"
+            title="Fondo de la hoja"
+          >
+            <Icon name="sheet" />
+          </button>
+          <button
+            className="icon-btn"
+            onClick={() => boardRef.current?.addPage()}
+            aria-label="Agregar una página al final"
+            title="Agregar página"
+          >
+            <Icon name="pagePlus" />
           </button>
           <button
             className="btn btn-small btn-ghost zoom-btn"
@@ -91,6 +135,22 @@ export function NoteEditor() {
         </div>
       </header>
       <div className="board" ref={rootRef} />
+      {page.total > 1 && (
+        <div className="page-pill" aria-live="polite">
+          {page.index + 1} / {page.total}
+        </div>
+      )}
+      {bgOpen && bg && (
+        <BackgroundPanel
+          value={bg}
+          scope={scope}
+          page={page.index}
+          total={page.total}
+          onChange={changeBackground}
+          onScope={changeScope}
+          onClose={closeBg}
+        />
+      )}
       {showDebug && (
         <div className="debug-panel" aria-live="off">
           {debug ? (

@@ -17,10 +17,23 @@ export interface Stroke {
   bbox: BBox
 }
 
+export type BackgroundType = 'blank' | 'ruled' | 'grid' | 'dots'
+
+export interface Background {
+  type: BackgroundType
+  /** Distancia entre líneas o puntos, en unidades de página */
+  spacing: number
+  /** Color de las líneas o puntos */
+  color: string
+  /** Color del papel */
+  paper: string
+}
+
 export interface Page {
   id: string
   width: number
   height: number
+  background: Background
   strokes: Stroke[]
 }
 

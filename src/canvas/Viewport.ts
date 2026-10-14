@@ -45,7 +45,7 @@ export class Viewport {
   }
 
   get minZoom(): number {
-    return this.fitZoom * 0.5
+    return this.fitZoom * 0.25
   }
 
   get maxZoom(): number {

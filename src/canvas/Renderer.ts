@@ -1,5 +1,6 @@
 import { bboxIntersects, rectToBBox, type Rect } from '../model/geometry'
 import type { BBox, Page, Stroke } from '../model/types'
+import { drawPageBackground } from './backgrounds'
 import { outlineOf, pathFromOutline, strokePath } from './strokeOutline'
 import type { Camera, Viewport } from './Viewport'
 
@@ -13,7 +14,6 @@ export interface LiveStroke {
   simulated: boolean
 }
 
-const PAPER = '#ffffff'
 const PAPER_EDGE = 'rgb(0 0 0 / 0.12)'
 
 /**
@@ -79,29 +79,36 @@ export class Renderer {
     ctx.setTransform(s, 0, 0, s, -cam.x * s, -cam.y * s)
   }
 
-  drawBackground(vp: Viewport, rects: readonly Rect[]) {
+  /** Las hojas con su fondo. Se redibuja en cada cambio de vista, así queda nítido a cualquier zoom. */
+  drawBackground(vp: Viewport, pages: readonly Page[], rects: readonly Rect[]) {
     const ctx = this.bgCtx
     ctx.setTransform(1, 0, 0, 1, 0, 0)
     ctx.clearRect(0, 0, this.bg.width, this.bg.height)
-    const viewBox = rectToBBox(vp.visibleWorld())
-    ctx.save()
-    ctx.scale(this.dpr, this.dpr)
-    for (const r of rects) {
+    const view = vp.visibleWorld()
+    const viewBox = rectToBBox(view)
+    for (let i = 0; i < pages.length; i++) {
+      const r = rects[i]
       if (!bboxIntersects(rectToBBox(r), viewBox)) continue
       const [sx, sy] = vp.toScreen(r.x, r.y)
       const sw = r.w * vp.cam.zoom
       const sh = r.h * vp.cam.zoom
+      ctx.save()
+      ctx.scale(this.dpr, this.dpr)
       ctx.shadowColor = 'rgb(0 0 0 / 0.18)'
       ctx.shadowBlur = 12
       ctx.shadowOffsetY = 2
-      ctx.fillStyle = PAPER
+      ctx.fillStyle = pages[i].background.paper
       ctx.fillRect(sx, sy, sw, sh)
-      ctx.shadowColor = 'transparent'
+      ctx.restore()
+      const local: BBox = [view.x - r.x, view.y - r.y, view.x + view.w - r.x, view.y + view.h - r.y]
+      this.withPage(ctx, vp.cam, r, () => drawPageBackground(ctx, pages[i].background, r.w, r.h, vp.cam.zoom, local))
+      ctx.save()
+      ctx.scale(this.dpr, this.dpr)
       ctx.strokeStyle = PAPER_EDGE
       ctx.lineWidth = 1
       ctx.strokeRect(Math.round(sx) + 0.5, Math.round(sy) + 0.5, Math.round(sw) - 1, Math.round(sh) - 1)
+      ctx.restore()
     }
-    ctx.restore()
   }
 
   /** Redibuja toda la tinta visible, nítida al zoom actual. Devuelve cuánto tardó (ms). */
