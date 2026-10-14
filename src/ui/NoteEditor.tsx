@@ -10,6 +10,7 @@ import { newPage } from '../model/memoryNotes'
 import type { NoteModel } from '../model/note'
 import type { Background } from '../model/types'
 import { BackgroundPanel, type Scope } from './BackgroundPanel'
+import { ConfirmDialog } from './Dialog'
 import { Icon } from './Icon'
 import { SelectionBar } from './SelectionBar'
 import { Toolbar } from './Toolbar'
@@ -48,6 +49,7 @@ export function NoteEditor({ note, title, onRename, status, actions = [], onBoar
   const [page, setPage] = useState({ index: 0, total: 1 })
   const [bgOpen, setBgOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
+  const [confirmPage, setConfirmPage] = useState<number | null>(null)
   const [bg, setBg] = useState<Background | null>(null)
   const [scope, setScope] = useState<Scope>('page')
   const [hist, setHist] = useState({ undo: false, redo: false })
@@ -83,6 +85,8 @@ export function NoteEditor({ note, title, onRename, status, actions = [], onBoar
     })
     boardRef.current = board
     onBoard?.(board)
+    // Para las pruebas automáticas (solo en desarrollo)
+    if (import.meta.env.DEV) Object.assign(window, { __notillas: { note, board } })
     const syncHistory = () => setHist({ undo: note.history.canUndo, redo: note.history.canRedo })
     syncHistory()
     const unsub = note.subscribe((e) => e.type === 'history' && syncHistory())
@@ -162,6 +166,7 @@ export function NoteEditor({ note, title, onRename, status, actions = [], onBoar
   const menu: MenuAction[] = [
     { label: 'Fondo de la hoja', icon: 'sheet', run: () => setBgOpen(true) },
     { label: 'Agregar página', icon: 'pagePlus', run: addPage },
+    ...(page.total > 1 ? [{ label: 'Borrar esta página', icon: 'trash' as const, run: () => setConfirmPage(page.index) }] : []),
     ...actions,
     { label: showDebug ? 'Ocultar datos del lápiz' : 'Datos del lápiz', icon: 'info', run: () => setShowDebug((v) => !v) },
   ]
@@ -274,6 +279,16 @@ export function NoteEditor({ note, title, onRename, status, actions = [], onBoar
             <span>Tocá la hoja para ver los datos del puntero</span>
           )}
         </div>
+      )}
+      {confirmPage !== null && (
+        <ConfirmDialog
+          title={`¿Borrar la página ${confirmPage + 1}?`}
+          body="Se borra con todo lo que tiene dibujado. No se puede deshacer."
+          confirm="Borrar página"
+          danger
+          onConfirm={() => note.pages[confirmPage] && note.removePage(note.pages[confirmPage].id)}
+          onClose={() => setConfirmPage(null)}
+        />
       )}
       {justDetectedPen && (
         <div className="toast" role="status">

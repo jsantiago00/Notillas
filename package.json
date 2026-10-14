@@ -12,7 +12,9 @@
     "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "icons": "pwa-assets-generator"
+    "icons": "pwa-assets-generator",
+    "dev:emu": "VITE_USE_EMULATORS=1 vite",
+    "emulators": "firebase emulators:start --only auth,firestore"
   },
   "dependencies": {
     "firebase": "^13.0.0",

@@ -2,7 +2,7 @@
 
 PWA de notas a mano alzada pensada para usar con lápiz. Funciona en celular, tablet y compu, y sincroniza tus notas entre dispositivos con Firebase.
 
-> **Estado:** etapa 4 de 7 (herramientas: resaltador, goma, lazo, deshacer). El plan completo está en [PLAN.md](PLAN.md).
+> **Estado:** etapa 5 de 7 (las notas se guardan en Firestore y se sincronizan entre dispositivos, también sin conexión). El plan completo está en [PLAN.md](PLAN.md).
 
 ## Requisitos
 
@@ -26,6 +26,7 @@ npm run dev               # http://localhost:5173
 | `npm run build` | Build de producción en `dist/`, con el service worker. |
 | `npm run preview` | Sirve `dist/` para revisar el build. |
 | `npm run icons` | Regenera los íconos a partir de `public/logo.svg`. |
+| `npm run emulators` + `npm run dev:emu` | La app contra los emuladores de Firebase (Auth y Firestore), sin tocar el proyecto real. Hace falta Java y `firebase-tools`. |
 
 ## Probar en el celular o la tablet
 
@@ -66,6 +67,13 @@ firebase deploy --only firestore:rules,firestore:indexes  # reglas e índices, s
 La primera vez hacen falta `firebase login` y `firebase use --add` ([docs/FIREBASE.md](docs/FIREBASE.md)).
 
 Cuando publicás una versión nueva, la app abierta lo detecta y muestra **«Hay una versión nueva · Actualizar»**. No se actualiza sola, para no cortarte un trazo a la mitad.
+
+## Cómo se guardan las notas
+
+- En Firestore, bajo `users/{uid}`: `folders`, `notes` y, dentro de cada nota, `pages/{id}/strokes/{id}` (un documento por trazo, con los puntos comprimidos en bytes).
+- Los cambios se escriben en lotes cada ~400 ms y al pasar a segundo plano. Sin conexión quedan en la caché del dispositivo (IndexedDB) y suben solos al volver.
+- Lo que cambia en otro dispositivo llega en tiempo real, trazo por trazo.
+- El puntito junto al título indica el estado: verde (sincronizado), girando (sincronizando) o rojo (sin conexión).
 
 ## Estructura
 

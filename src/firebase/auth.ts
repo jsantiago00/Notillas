@@ -1,5 +1,7 @@
 import {
   GoogleAuthProvider,
+  connectAuthEmulator,
+  signInWithCredential,
   getAuth,
   getRedirectResult,
   onAuthStateChanged,
@@ -59,6 +61,7 @@ export function initAuth(): void {
   if (!firebaseConfigured || auth) return
   auth = getAuth(getFirebaseApp())
   auth.languageCode = 'es'
+  if (USE_EMULATORS) connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true })
   onAuthStateChanged(auth, (u) => {
     useAuth.setState({ status: u ? 'signedIn' : 'signedOut', user: u ? toSessionUser(u) : null })
   })
@@ -95,6 +98,14 @@ export async function signInWithGoogle(): Promise<void> {
   } finally {
     useAuth.setState({ busy: false })
   }
+}
+
+const USE_EMULATORS = import.meta.env.VITE_USE_EMULATORS === '1'
+
+/** Solo con los emuladores (pruebas locales): entra con una cuenta de Google falsa. */
+export async function signInForTests(sub: string, email: string): Promise<void> {
+  if (!USE_EMULATORS || !auth) throw new Error('Solo con emuladores')
+  await signInWithCredential(auth, GoogleAuthProvider.credential(JSON.stringify({ sub, email, email_verified: true, name: 'Prueba' })))
 }
 
 export async function signOut(): Promise<void> {

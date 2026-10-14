@@ -15,9 +15,9 @@
 | 1. Setup, PWA y login con Google | ✅ Hecha, más la publicación en GitHub Pages |
 | 2. Lienzo: presión, pan/zoom y rechazo de palma | ✅ Hecha |
 | 3. Fondos de hoja | ✅ Hecha |
-| 4. Herramientas: goma, resaltador, lazo y deshacer | ✅ Hecha (a confirmar en la tablet) |
-| 5. Persistencia y sincronización con Firestore | ⏳ Sigue esta |
-| 6. Reconocimiento de formas | — |
+| 4. Herramientas: goma, resaltador, lazo y deshacer | ✅ Hecha |
+| 5. Persistencia y sincronización con Firestore | ✅ Hecha (a confirmar en la tablet) |
+| 6. Reconocimiento de formas | ⏳ Sigue esta |
 | 7. Exportar (PNG/PDF) y pulido | — |
 
 Actualizá esta tabla en el mismo commit que cierra cada etapa.
@@ -49,23 +49,31 @@ Actualizá esta tabla en el mismo commit que cierra cada etapa.
   - Redibujá en `contextrestored` y al volver de segundo plano (`visibilitychange`).
   - **Botón del S Pen:** Chrome lo informa como botón 2 (barril) o como «clic derecho». Mientras está apretado, la herramienta pasa a ser la goma. La punta trasera de lápices tipo Surface llega como `buttons & 32`.
 - **Firebase Storage no se usa** (exige plan Blaze). Las miniaturas van como un WebP chico en el documento de la nota.
+- **Sincronización:** todo cambio de trazos pasa por `NoteModel` (evento `commit` con el cambio neto); `NoteSync` lo escribe en lotes. Lo remoto entra con `applyRemote` (no va al historial). El eco propio se reconoce por la firma del trazo.
+- **Sin índices compuestos:** las consultas ordenan por un solo campo y el resto se filtra en el cliente.
+- **Probar la sincronización:** con los emuladores (`npm run emulators` y `npm run dev:emu`); con `VITE_USE_EMULATORS=1` existe `signInForTests` en `auth.ts` y `window.__notillas` en desarrollo.
 
 ## Estructura
 
 ```
 src/
-  firebase/   app.ts (init + redirect de web.app), auth.ts (store de sesión), db.ts (Firestore offline)
+  firebase/   app.ts (init + redirect de web.app), auth.ts (store de sesión), db.ts (Firestore offline),
+              repo.ts (rutas, conversión, carpetas y notas), noteSync.ts (nota abierta ⇄ Firestore),
+              syncStatus.ts (sincronizado / sincronizando / sin conexión)
   lib/        device.ts (+test), theme.ts, assets.ts, inputPrefs.ts («el dedo dibuja», lápiz visto),
               toolPrefs.ts (herramienta, colores y grosores por dispositivo), layoutMode.ts (celular/tablet/compu)
   model/      types.ts, geometry.ts (+test: goma, lazo, transformaciones), background.ts (presets y último fondo),
               history.ts (deshacer/rehacer), note.ts (+test: NoteModel, todos los cambios pasan por acá;
-              transacciones para la goma), memoryNotes.ts (la nota de prueba, sin guardar)
+              transacciones para la goma), memoryNotes.ts (la nota de prueba, sin guardar),
+              codec.ts (+test: puntos ⇄ bytes)
   canvas/     Board.ts (motor: herramientas, selección, cuadros con rAF), Viewport.ts (+test, cámara e inercia),
               InputController.ts (lápiz, dedo, mouse, gestos), palm.ts (+test), Renderer.ts (3 capas),
               strokeOutline.ts (perfect-freehand → Path2D), layout.ts (páginas apiladas),
-              backgrounds.ts (+test, lisa/rayada/cuadriculada/punteada; también para exportar)
-  ui/         Login, Home, NoteEditor (+ menú ⋯ y título), Toolbar (+ opciones), SelectionBar, MemoryNote, BackgroundPanel, Splash, SetupMissing, AccountButton, ThemeButton, UpdatePrompt, Icon
-  App.tsx     rutas (/, /nota/:id) y puerta de login
+              backgrounds.ts (+test, lisa/rayada/cuadriculada/punteada; también para exportar),
+              renderPage.ts (página fuera de pantalla: miniaturas y PNG)
+  ui/         Login, Home (lista, carpetas, tarjetas), NoteRoute (nota de Firestore), Dialog, SyncBadge,
+              NoteEditor (+ menú ⋯ y título), Toolbar (+ opciones), SelectionBar, MemoryNote, BackgroundPanel, Splash, SetupMissing, AccountButton, ThemeButton, UpdatePrompt, Icon
+  App.tsx     rutas (/, /nota/:id, /prueba) y puerta de login
 firestore.rules, firestore.indexes.json, firebase.json
 .github/workflows/pages.yml
 ```
