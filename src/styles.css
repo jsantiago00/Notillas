@@ -353,3 +353,106 @@ h2 {
   box-shadow: var(--shadow);
   font-size: 0.95rem;
 }
+
+.btn-primary {
+  margin-top: 8px;
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-text);
+  text-decoration: none;
+}
+
+.btn-primary:hover {
+  background: color-mix(in srgb, var(--accent) 88%, black);
+}
+
+.icon-btn.is-on {
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  color: var(--accent);
+}
+
+a.icon-btn {
+  color: inherit;
+}
+
+/* ---------- Editor ---------- */
+.editor {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  /* Sin selección ni menú de pulsación larga en todo el editor */
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.editor-bar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: calc(4px + var(--safe-top)) calc(8px + var(--safe-right)) 4px calc(8px + var(--safe-left));
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  touch-action: manipulation;
+  z-index: 2;
+}
+
+.editor-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+  padding-left: 4px;
+}
+
+.editor-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.zoom-btn {
+  min-width: 68px;
+  font-variant-numeric: tabular-nums;
+}
+
+.board {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  /* El lienzo maneja todos los gestos: sin scroll, zoom ni «tirar para recargar» del navegador */
+  touch-action: none;
+  overscroll-behavior: none;
+  background: color-mix(in srgb, var(--bg) 92%, #888);
+  cursor: crosshair;
+}
+
+.board-layer {
+  position: absolute;
+  left: 0;
+  top: 0;
+  pointer-events: none;
+  transform-origin: 0 0;
+}
+
+.debug-panel {
+  position: fixed;
+  left: calc(8px + var(--safe-left));
+  bottom: calc(8px + var(--safe-bottom));
+  z-index: 3;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  max-width: calc(100vw - 16px);
+  padding: 6px 12px;
+  border-radius: 10px;
+  background: rgb(0 0 0 / 0.72);
+  color: #fff;
+  font: 12px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+  pointer-events: none;
+}

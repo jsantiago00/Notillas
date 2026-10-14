@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { useAuth } from '../firebase/auth'
 import { AccountButton } from './AccountButton'
 import { Icon } from './Icon'
@@ -23,7 +24,13 @@ export function Home() {
         <div className="empty">
           <Icon name="note" size={48} />
           <h2>Hola{first ? `, ${first}` : ''}</h2>
-          <p className="muted">Todavía no hay notas. La lista, las carpetas y el lienzo llegan en las próximas etapas.</p>
+          <p className="muted">
+            Todavía no hay notas guardadas: la lista y las carpetas llegan en la etapa 5. Mientras tanto, podés probar el
+            lienzo (lo que dibujes se pierde al recargar).
+          </p>
+          <Link to="/nota/borrador" className="btn btn-primary">
+            <Icon name="pen" size={20} /> Probar el lienzo
+          </Link>
         </div>
       </main>
     </div>

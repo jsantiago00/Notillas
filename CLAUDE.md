@@ -13,8 +13,8 @@
 | Etapa | Estado |
 |---|---|
 | 1. Setup, PWA y login con Google | ✅ Hecha, más la publicación en GitHub Pages |
-| 2. Lienzo: presión, pan/zoom y rechazo de palma | ⏳ Sigue esta |
-| 3. Fondos de hoja | — |
+| 2. Lienzo: presión, pan/zoom y rechazo de palma | ✅ Hecha (a confirmar en la tablet) |
+| 3. Fondos de hoja | ⏳ Sigue esta |
 | 4. Herramientas: goma, resaltador, lazo y deshacer | — |
 | 5. Persistencia y sincronización con Firestore | — |
 | 6. Reconocimiento de formas | — |
@@ -55,9 +55,13 @@ Actualizá esta tabla en el mismo commit que cierra cada etapa.
 ```
 src/
   firebase/   app.ts (init + redirect de web.app), auth.ts (store de sesión), db.ts (Firestore offline)
-  lib/        device.ts (+test), theme.ts, assets.ts
-  ui/         Login, Home, Splash, SetupMissing, AccountButton, ThemeButton, UpdatePrompt, Icon
-  App.tsx     rutas y puerta de login
+  lib/        device.ts (+test), theme.ts, assets.ts, inputPrefs.ts («el dedo dibuja», lápiz visto)
+  model/      types.ts, geometry.ts (+test), memoryNotes.ts (notas en memoria hasta la etapa 5)
+  canvas/     Board.ts (motor: une todo, cuadros con rAF), Viewport.ts (+test, cámara e inercia),
+              InputController.ts (lápiz, dedo, mouse, gestos), palm.ts (+test), Renderer.ts (3 capas),
+              strokeOutline.ts (perfect-freehand → Path2D), layout.ts (páginas apiladas)
+  ui/         Login, Home, NoteEditor, Splash, SetupMissing, AccountButton, ThemeButton, UpdatePrompt, Icon
+  App.tsx     rutas (/, /nota/:id) y puerta de login
 firestore.rules, firestore.indexes.json, firebase.json
 .github/workflows/pages.yml
 ```

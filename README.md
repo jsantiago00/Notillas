@@ -2,7 +2,7 @@
 
 PWA de notas a mano alzada pensada para usar con lápiz. Funciona en celular, tablet y compu, y sincroniza tus notas entre dispositivos con Firebase.
 
-> **Estado:** etapa 1 de 7 (setup, PWA y login con Google). El plan completo está en [PLAN.md](PLAN.md).
+> **Estado:** etapa 2 de 7 (lienzo con presión, pan, zoom y rechazo de palma). El plan completo está en [PLAN.md](PLAN.md).
 
 ## Requisitos
 
