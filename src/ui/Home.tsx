@@ -15,6 +15,7 @@ import {
   type NoteMeta,
 } from '../firebase/repo'
 import { LOGO } from '../lib/assets'
+import { friendlyError } from '../lib/errors'
 import { relativeTime } from '../lib/time'
 import { readLastBackground } from '../model/background'
 import { AccountButton } from './AccountButton'
@@ -50,7 +51,7 @@ export function Home() {
   const purged = useRef(new Set<string>())
 
   useEffect(() => {
-    const fail = (e: Error) => setError(e.message)
+    const fail = (e: Error) => setError(friendlyError(e))
     const a = watchFolders(uid, setFolders, fail)
     const b = watchNotes(
       uid,
@@ -178,7 +179,7 @@ export function Home() {
               <Icon name="plus" size={20} /> Nueva nota
             </button>
           </div>
-          {error && <p className="error">No se pudieron leer las notas: {error}</p>}
+          {error && <p className="error">No se pudieron leer las notas. {error}</p>}
           {notes === null ? (
             <p className="muted">Cargando…</p>
           ) : visible.length === 0 ? (
@@ -199,7 +200,7 @@ export function Home() {
                     try {
                       await duplicateNote(uid, n)
                     } catch (e) {
-                      setError((e as Error).message)
+                      setError(friendlyError(e))
                     }
                   }}
                   onMove={(folderId) => updateNote(uid, n.id, { folderId })}

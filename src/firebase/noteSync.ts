@@ -1,5 +1,6 @@
 import { onSnapshot, serverTimestamp, type Unsubscribe } from 'firebase/firestore'
 import { thumbnail } from '../canvas/renderPage'
+import { friendlyError } from '../lib/errors'
 import type { StrokeChange } from '../model/history'
 import { NoteModel } from '../model/note'
 import type { Page, Stroke } from '../model/types'
@@ -67,7 +68,7 @@ export class NoteSync {
   }
 
   start() {
-    const fail = (e: Error) => this.onState({ status: 'error', message: e.message })
+    const fail = (e: Error) => this.onState({ status: 'error', message: friendlyError(e) })
     this.subs.push(
       onSnapshot(
         noteRef(this.uid, this.noteId),
