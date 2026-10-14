@@ -1,12 +1,23 @@
 /** Caja alineada a los ejes: [x0, y0, x1, y1]. */
 export type BBox = [number, number, number, number]
 
-export type Tool = 'pen'
+/** Herramientas que dejan tinta. */
+export type InkTool = 'pen' | 'highlighter'
+
+/** Forma reconocida (etapa 6): se guarda como metadato del trazo. */
+export interface ShapeMeta {
+  kind: string
+  params: number[]
+}
 
 export interface Stroke {
   id: string
-  tool: Tool
+  tool: InkTool
   color: string
+  /** Opacidad (el resaltador va por debajo de la tinta, semitransparente) */
+  opacity: number
+  /** Orden de dibujo: hora del cliente con desempate */
+  z: number
   /** Diámetro base, en unidades de página */
   size: number
   /** Puntos intercalados x, y, presión (0–1), en coordenadas de la página */
@@ -15,6 +26,7 @@ export interface Stroke {
   simulated: boolean
   /** Caja del contorno ya dibujado, con el grosor incluido */
   bbox: BBox
+  shape?: ShapeMeta
 }
 
 export type BackgroundType = 'blank' | 'ruled' | 'grid' | 'dots'

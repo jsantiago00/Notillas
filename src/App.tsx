@@ -4,7 +4,7 @@ import { firebaseConfigured } from './firebase/app'
 import { initAuth, useAuth } from './firebase/auth'
 import { Home } from './ui/Home'
 import { Login } from './ui/Login'
-import { NoteEditor } from './ui/NoteEditor'
+import { MemoryNote } from './ui/MemoryNote'
 import { SetupMissing } from './ui/SetupMissing'
 import { Splash } from './ui/Splash'
 import { UpdatePrompt } from './ui/UpdatePrompt'
@@ -18,7 +18,7 @@ function Gate() {
   return (
     <Routes>
       <Route path="/" element={<Home />} />
-      <Route path="/nota/:id" element={<NoteEditor />} />
+      <Route path="/nota/:id" element={<MemoryNote />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )

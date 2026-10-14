@@ -1,28 +1,57 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
+import { Link } from 'react-router-dom'
 import { Board } from '../canvas/Board'
 import type { PointerDebug } from '../canvas/InputController'
 import { dismissPenNotice, notePenSeen, setFingerDraws, useInputPrefs } from '../lib/inputPrefs'
+import { useLayoutMode } from '../lib/layoutMode'
+import { setTool, useTools, type ToolId } from '../lib/toolPrefs'
 import { saveLastBackground } from '../model/background'
-import { getMemoryPages } from '../model/memoryNotes'
+import { newPage } from '../model/memoryNotes'
+import type { NoteModel } from '../model/note'
 import type { Background } from '../model/types'
 import { BackgroundPanel, type Scope } from './BackgroundPanel'
 import { Icon } from './Icon'
+import { SelectionBar } from './SelectionBar'
+import { Toolbar } from './Toolbar'
 
-const PEN = { color: '#1f1d1a', size: 4 }
+export interface MenuAction {
+  label: string
+  icon: Parameters<typeof Icon>[0]['name']
+  run: (ctx: { board: Board; page: number }) => void
+}
 
-export function NoteEditor() {
-  const { id = 'borrador' } = useParams()
+interface Props {
+  note: NoteModel
+  title: string
+  /** Renombrar (si no se pasa, el título no se puede editar) */
+  onRename?: (title: string) => void
+  /** Indicador de sincronización, junto al título */
+  status?: ReactNode
+  /** Acciones extra del menú «⋯» (exportar, etc.) */
+  actions?: MenuAction[]
+  /** Se llama con el motor del lienzo (para miniaturas, exportar, etc.) */
+  onBoard?: (board: Board | null) => void
+}
+
+const TOOL_KEYS: Record<string, ToolId> = { p: 'pen', h: 'highlighter', e: 'eraser', l: 'lasso' }
+
+export function NoteEditor({ note, title, onRename, status, actions = [], onBoard }: Props) {
   const rootRef = useRef<HTMLDivElement>(null)
   const boardRef = useRef<Board | null>(null)
+  const mode = useLayoutMode()
+  const side = useTools((s) => s.side)
+  const tool = useTools((s) => s.tool)
   const [zoom, setZoom] = useState(1)
   const [showDebug, setShowDebug] = useState(false)
   const [debug, setDebug] = useState<PointerDebug | null>(null)
   const debugOn = useRef(false)
   const [page, setPage] = useState({ index: 0, total: 1 })
   const [bgOpen, setBgOpen] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
   const [bg, setBg] = useState<Background | null>(null)
   const [scope, setScope] = useState<Scope>('page')
+  const [hist, setHist] = useState({ undo: false, redo: false })
+  const [selection, setSelection] = useState<{ x: number; y: number; w: number; h: number; count: number } | null>(null)
   const fingerDraws = useInputPrefs((s) => s.fingerDraws)
   const justDetectedPen = useInputPrefs((s) => s.justDetectedPen)
 
@@ -33,12 +62,17 @@ export function NoteEditor() {
   useEffect(() => {
     const root = rootRef.current!
     let lastDebug = 0
-    const board = new Board(root, getMemoryPages(id), {
-      pen: PEN,
+    const board = new Board(root, note, {
+      tools: () => useTools.getState(),
       fingerDraws: () => useInputPrefs.getState().fingerDraws,
       onPenDetected: notePenSeen,
       onZoom: setZoom,
       onPage: (index, total) => setPage({ index, total }),
+      onSelection: (box) => {
+        if (!box) return setSelection(null)
+        const r = root.getBoundingClientRect()
+        setSelection({ ...box, x: box.x + r.left, y: box.y + r.top })
+      },
       onDebug: (info) => {
         if (!debugOn.current) return
         const now = performance.now()
@@ -48,11 +82,42 @@ export function NoteEditor() {
       },
     })
     boardRef.current = board
+    onBoard?.(board)
+    const syncHistory = () => setHist({ undo: note.history.canUndo, redo: note.history.canRedo })
+    syncHistory()
+    const unsub = note.subscribe((e) => e.type === 'history' && syncHistory())
+    const unsubTools = useTools.subscribe((s, prev) => s.tool !== prev.tool && board.toolChanged())
     return () => {
+      unsub()
+      unsubTools()
       board.destroy()
       boardRef.current = null
+      onBoard?.(null)
     }
-  }, [id])
+    // onBoard se usa solo al montar
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [note])
+
+  // Atajos de teclado
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement | null
+      if (t && (t.isContentEditable || t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) return
+      const b = boardRef.current
+      if (!b) return
+      const mod = e.ctrlKey || e.metaKey
+      const k = e.key.toLowerCase()
+      if (mod && k === 'z') b[e.shiftKey ? 'redo' : 'undo']()
+      else if (mod && k === 'y') b.redo()
+      else if (!mod && !e.altKey && TOOL_KEYS[k]) setTool(TOOL_KEYS[k])
+      else if (e.key === 'Delete' || e.key === 'Backspace') b.deleteSelection()
+      else if (e.key === 'Escape') b.clearSelection()
+      else return
+      e.preventDefault()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
 
   useEffect(() => {
     if (!justDetectedPen) return
@@ -62,31 +127,54 @@ export function NoteEditor() {
 
   // Con el panel abierto, muestra el fondo de la página que está a la vista
   useEffect(() => {
-    if (bgOpen && boardRef.current) setBg(boardRef.current.background(page.index))
-  }, [bgOpen, page.index])
+    if (bgOpen) setBg(note.pages[page.index]?.background ?? null)
+  }, [bgOpen, page.index, note])
 
   const changeBackground = (next: Background) => {
     setBg(next)
-    boardRef.current?.setBackground(scope === 'all' ? 'all' : page.index, next)
+    note.setBackground(scope === 'all' ? 'all' : [note.pages[page.index].id], next)
     saveLastBackground(next)
   }
 
   const changeScope = (next: Scope) => {
     setScope(next)
-    if (next === 'all' && bg) boardRef.current?.setBackground('all', bg)
+    if (next === 'all' && bg) note.setBackground('all', bg)
+  }
+
+  const addPage = () => {
+    note.addPage(newPage(note.pages[note.pages.length - 1].background))
+    boardRef.current?.scrollToPage(note.pages.length - 1)
   }
 
   const closeBg = useCallback(() => setBgOpen(false), [])
 
   const fingerLabel = fingerDraws ? 'El dedo dibuja (tocá para que desplace)' : 'El dedo desplaza (tocá para que dibuje)'
+  const toolbar = (
+    <Toolbar
+      mode={mode}
+      canUndo={hist.undo}
+      canRedo={hist.redo}
+      onUndo={() => boardRef.current?.undo()}
+      onRedo={() => boardRef.current?.redo()}
+    />
+  )
+
+  const menu: MenuAction[] = [
+    { label: 'Fondo de la hoja', icon: 'sheet', run: () => setBgOpen(true) },
+    { label: 'Agregar página', icon: 'pagePlus', run: addPage },
+    ...actions,
+    { label: showDebug ? 'Ocultar datos del lápiz' : 'Datos del lápiz', icon: 'info', run: () => setShowDebug((v) => !v) },
+  ]
 
   return (
-    <div className="editor">
+    <div className={`editor mode-${mode} side-${side} tool-${tool}`}>
       <header className="editor-bar">
         <Link to="/" className="icon-btn" aria-label="Volver a la lista" title="Volver">
           <Icon name="back" />
         </Link>
-        <span className="editor-title">Nota sin título</span>
+        <TitleField title={title} onRename={onRename} />
+        {status}
+        {mode === 'desktop' && toolbar}
         <div className="editor-actions">
           <button
             className={`icon-btn${fingerDraws ? ' is-on' : ''}`}
@@ -98,24 +186,6 @@ export function NoteEditor() {
             <Icon name={fingerDraws ? 'finger' : 'hand'} />
           </button>
           <button
-            className={`icon-btn${bgOpen ? ' is-on' : ''}`}
-            data-panel-toggle="bg"
-            onClick={() => setBgOpen((v) => !v)}
-            aria-expanded={bgOpen}
-            aria-label="Fondo de la hoja"
-            title="Fondo de la hoja"
-          >
-            <Icon name="sheet" />
-          </button>
-          <button
-            className="icon-btn"
-            onClick={() => boardRef.current?.addPage()}
-            aria-label="Agregar una página al final"
-            title="Agregar página"
-          >
-            <Icon name="pagePlus" />
-          </button>
-          <button
             className="btn btn-small btn-ghost zoom-btn"
             onClick={() => boardRef.current?.fitWidth()}
             title="Ajustar al ancho"
@@ -123,22 +193,54 @@ export function NoteEditor() {
           >
             {Math.round(zoom * 100)} %
           </button>
-          <button
-            className={`icon-btn${showDebug ? ' is-on' : ''}`}
-            onClick={() => setShowDebug((v) => !v)}
-            aria-pressed={showDebug}
-            aria-label="Datos del lápiz"
-            title="Datos del lápiz"
-          >
-            <Icon name="info" />
-          </button>
+          <div className="menu-anchor">
+            <button
+              className={`icon-btn${menuOpen ? ' is-on' : ''}`}
+              onClick={() => setMenuOpen((v) => !v)}
+              aria-expanded={menuOpen}
+              aria-label="Más opciones"
+              title="Más opciones"
+            >
+              <Icon name="more" />
+            </button>
+            {menuOpen && (
+              <Menu onClose={() => setMenuOpen(false)}>
+                {menu.map((a) => (
+                  <button
+                    key={a.label}
+                    role="menuitem"
+                    className="menu-item"
+                    onClick={() => {
+                      setMenuOpen(false)
+                      if (boardRef.current) a.run({ board: boardRef.current, page: page.index })
+                    }}
+                  >
+                    <Icon name={a.icon} size={18} /> {a.label}
+                  </button>
+                ))}
+              </Menu>
+            )}
+          </div>
         </div>
       </header>
-      <div className="board" ref={rootRef} />
-      {page.total > 1 && (
-        <div className="page-pill" aria-live="polite">
-          {page.index + 1} / {page.total}
-        </div>
+      {mode === 'phone' && <div className="tool-row">{toolbar}</div>}
+      <div className="board-wrap">
+        <div className="board" ref={rootRef} />
+        {mode === 'tablet' && toolbar}
+        {page.total > 1 && (
+          <div className="page-pill" aria-live="polite">
+            {page.index + 1} / {page.total}
+          </div>
+        )}
+      </div>
+      {selection && (
+        <SelectionBar
+          box={selection}
+          onDelete={() => boardRef.current?.deleteSelection()}
+          onDuplicate={() => boardRef.current?.duplicateSelection()}
+          onColor={(c) => boardRef.current?.recolorSelection(c)}
+          onDone={() => boardRef.current?.clearSelection()}
+        />
       )}
       {bgOpen && bg && (
         <BackgroundPanel
@@ -181,6 +283,74 @@ export function NoteEditor() {
           </button>
         </div>
       )}
+    </div>
+  )
+}
+
+/** Título editable: se toca, se escribe y se confirma con Enter o al salir. */
+function TitleField({ title, onRename }: { title: string; onRename?: (t: string) => void }) {
+  const [editing, setEditing] = useState(false)
+  const [value, setValue] = useState(title)
+  if (!onRename || !editing) {
+    return (
+      <button
+        className="editor-title"
+        onClick={() => {
+          if (!onRename) return
+          setValue(title)
+          setEditing(true)
+        }}
+        disabled={!onRename}
+        title={onRename ? 'Cambiar el título' : undefined}
+      >
+        {title || 'Sin título'}
+      </button>
+    )
+  }
+  const done = () => {
+    setEditing(false)
+    const t = value.trim()
+    if (t !== title) onRename(t)
+  }
+  return (
+    <input
+      className="editor-title-input"
+      value={value}
+      autoFocus
+      maxLength={120}
+      placeholder="Sin título"
+      aria-label="Título de la nota"
+      onChange={(e) => setValue(e.target.value)}
+      onBlur={done}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') done()
+        if (e.key === 'Escape') setEditing(false)
+      }}
+    />
+  )
+}
+
+/** Menú desplegable que se cierra al tocar afuera (sin dibujar en la hoja). */
+export function Menu({ children, onClose }: { children: ReactNode; onClose: () => void }) {
+  const ref = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const onDown = (e: PointerEvent) => {
+      const t = e.target as Element
+      if (ref.current?.contains(t) || ref.current?.parentElement?.contains(t)) return
+      onClose()
+      if (t.closest?.('.board')) e.stopPropagation()
+    }
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
+    document.addEventListener('pointerdown', onDown, true)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('pointerdown', onDown, true)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [onClose])
+  return (
+    <div className="menu" role="menu" ref={ref}>
+      {children}
     </div>
   )
 }

@@ -14,9 +14,9 @@
 |---|---|
 | 1. Setup, PWA y login con Google | ✅ Hecha, más la publicación en GitHub Pages |
 | 2. Lienzo: presión, pan/zoom y rechazo de palma | ✅ Hecha |
-| 3. Fondos de hoja | ✅ Hecha (a confirmar en la tablet) |
-| 4. Herramientas: goma, resaltador, lazo y deshacer | ⏳ Sigue esta |
-| 5. Persistencia y sincronización con Firestore | — |
+| 3. Fondos de hoja | ✅ Hecha |
+| 4. Herramientas: goma, resaltador, lazo y deshacer | ✅ Hecha (a confirmar en la tablet) |
+| 5. Persistencia y sincronización con Firestore | ⏳ Sigue esta |
 | 6. Reconocimiento de formas | — |
 | 7. Exportar (PNG/PDF) y pulido | — |
 
@@ -55,14 +55,16 @@ Actualizá esta tabla en el mismo commit que cierra cada etapa.
 ```
 src/
   firebase/   app.ts (init + redirect de web.app), auth.ts (store de sesión), db.ts (Firestore offline)
-  lib/        device.ts (+test), theme.ts, assets.ts, inputPrefs.ts («el dedo dibuja», lápiz visto)
-  model/      types.ts, geometry.ts (+test), background.ts (presets y último fondo usado),
-              memoryNotes.ts (notas en memoria hasta la etapa 5)
-  canvas/     Board.ts (motor: une todo, cuadros con rAF), Viewport.ts (+test, cámara e inercia),
+  lib/        device.ts (+test), theme.ts, assets.ts, inputPrefs.ts («el dedo dibuja», lápiz visto),
+              toolPrefs.ts (herramienta, colores y grosores por dispositivo), layoutMode.ts (celular/tablet/compu)
+  model/      types.ts, geometry.ts (+test: goma, lazo, transformaciones), background.ts (presets y último fondo),
+              history.ts (deshacer/rehacer), note.ts (+test: NoteModel, todos los cambios pasan por acá;
+              transacciones para la goma), memoryNotes.ts (la nota de prueba, sin guardar)
+  canvas/     Board.ts (motor: herramientas, selección, cuadros con rAF), Viewport.ts (+test, cámara e inercia),
               InputController.ts (lápiz, dedo, mouse, gestos), palm.ts (+test), Renderer.ts (3 capas),
               strokeOutline.ts (perfect-freehand → Path2D), layout.ts (páginas apiladas),
               backgrounds.ts (+test, lisa/rayada/cuadriculada/punteada; también para exportar)
-  ui/         Login, Home, NoteEditor, BackgroundPanel, Splash, SetupMissing, AccountButton, ThemeButton, UpdatePrompt, Icon
+  ui/         Login, Home, NoteEditor (+ menú ⋯ y título), Toolbar (+ opciones), SelectionBar, MemoryNote, BackgroundPanel, Splash, SetupMissing, AccountButton, ThemeButton, UpdatePrompt, Icon
   App.tsx     rutas (/, /nota/:id) y puerta de login
 firestore.rules, firestore.indexes.json, firebase.json
 .github/workflows/pages.yml

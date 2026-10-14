@@ -1,27 +1,25 @@
 import { readLastBackground } from './background'
+import { NoteModel, newId } from './note'
 import { PAGE_HEIGHT, PAGE_WIDTH, type Background, type Page } from './types'
 
 /**
- * Notas en memoria hasta la etapa 5 (Firestore): se pierden al recargar,
+ * Notas en memoria (la nota de prueba sin conexión con Firestore): se pierden al recargar,
  * pero sobreviven a ir y volver de la lista.
  */
-const notes = new Map<string, Page[]>()
+const notes = new Map<string, NoteModel>()
 
-const INITIAL_PAGES = 1
-
-export function getMemoryPages(noteId: string): Page[] {
-  let pages = notes.get(noteId)
-  if (!pages) {
-    const background = readLastBackground()
-    pages = Array.from({ length: INITIAL_PAGES }, () => newPage(background))
-    notes.set(noteId, pages)
+export function getMemoryNote(noteId: string): NoteModel {
+  let note = notes.get(noteId)
+  if (!note) {
+    note = new NoteModel([newPage(readLastBackground())])
+    notes.set(noteId, note)
   }
-  return pages
+  return note
 }
 
 export function newPage(background: Background): Page {
   return {
-    id: Date.now().toString(36) + Math.random().toString(36).slice(2, 8),
+    id: newId(),
     width: PAGE_WIDTH,
     height: PAGE_HEIGHT,
     background: { ...background },

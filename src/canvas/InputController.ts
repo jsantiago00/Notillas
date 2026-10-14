@@ -24,8 +24,11 @@ export interface PointerDebug {
 /** Lo que el controlador le pide al lienzo. */
 export interface InputSink {
   readonly vp: Viewport
-  /** Empieza un trazo; devuelve false si el punto no cae en ninguna página. */
-  beginStroke(id: number, s: Sample, simulated: boolean): boolean
+  /**
+   * Empieza a usar la herramienta (trazo, goma o lazo); devuelve false si no hay nada que hacer
+   * ahí (por ejemplo, fuera de las páginas). `eraser`: el botón del lápiz fuerza la goma.
+   */
+  beginStroke(id: number, s: Sample, simulated: boolean, eraser?: boolean): boolean
   extendStroke(id: number, samples: Sample[], predicted: Sample[]): void
   /** Termina el trazo: lo confirma o lo descarta. */
   endStroke(id: number, commit: boolean): void
@@ -35,6 +38,10 @@ export interface InputSink {
   /** Se vio un lápiz (para apagar «el dedo dibuja»). */
   penDetected(): void
   fingerDraws(): boolean
+  /** Toque corto con dos dedos: deshacer. */
+  twoFingerTap?(): void
+  /** El lápiz o el mouse se mueve sin apoyar (para mostrar la goma); null al salir. */
+  hover?(s: { x: number; y: number } | null): void
   debug?(info: PointerDebug): void
 }
 
@@ -54,17 +61,24 @@ interface Ptr {
 interface Pinch {
   a: number
   b: number
+  t0: number
+  cam0: Camera
+  mid0: { x: number; y: number }
+  moved: number
   anchor: [number, number]
   d0: number
   z0: number
 }
 
-/** Botón 2 (barril del S Pen o clic derecho) y 32 (punta trasera tipo Surface): goma, etapa 4. */
+/** Botón 2 (barril del S Pen o clic derecho) y 32 (punta trasera tipo Surface): goma. */
 const ERASER_BUTTONS = 2 | 32
 /** Un trazo de dedo más corto que esto se toma como el principio de un pellizco. */
 const PINCH_GRACE_MS = 250
 /** Si la palma desplazó la hoja hace menos de esto, al apoyar el lápiz se vuelve atrás. */
 const PALM_PAN_UNDO_MS = 1000
+/** Toque con dos dedos: más corto que esto y casi sin moverse. */
+const TAP_MS = 280
+const TAP_MOVE_PX = 12
 
 /**
  * Pointer Events: lápiz, dedo y mouse.
@@ -100,6 +114,7 @@ export class InputController {
     on(el, 'pointermove', this.onMove)
     on(el, 'pointerup', this.onUp)
     on(el, 'pointercancel', this.onUp)
+    on(el, 'pointerleave', this.onLeave)
     on(el, 'wheel', this.onWheel, { passive: false })
     // Bloqueos del navegador: menú contextual (pulsación larga o botón del S Pen),
     // selección de texto, zoom con doble toque y gestos de iOS
@@ -150,11 +165,9 @@ export class InputController {
       this.sink.penDetected()
       this.cancelTouches(now)
       this.sink.vp.stopInertia()
-      if (e.buttons & ERASER_BUTTONS) {
-        this.add(e, 'ignored')
-        return
-      }
-      const ok = this.sink.beginStroke(e.pointerId, { ...pos, p: penPressure(e) }, false)
+      // Con el botón del lápiz apretado (o la punta trasera), la herramienta es la goma
+      const eraser = (e.buttons & ERASER_BUTTONS) !== 0
+      const ok = this.sink.beginStroke(e.pointerId, { ...pos, p: penPressure(e) }, false, eraser)
       this.add(e, ok ? 'draw' : 'ignored')
       return
     }
@@ -205,7 +218,14 @@ export class InputController {
   private onMove = (e: PointerEvent) => {
     if (e.pointerType === 'pen') this.palm.notePen(e.timeStamp, (e.buttons & 1) === 1)
     const p = this.ptrs.get(e.pointerId)
-    if (!p) return
+    if (!p) {
+      if (e.pointerType !== 'touch') {
+        const r = this.el.getBoundingClientRect()
+        this.origin = { x: r.left, y: r.top }
+        this.sink.hover?.(this.local(e))
+      }
+      return
+    }
     const coalesced = e.getCoalescedEvents?.() ?? []
     const events = coalesced.length ? coalesced : [e]
     const predictedEvents = e.getPredictedEvents?.() ?? []
@@ -243,7 +263,17 @@ export class InputController {
       if (!cancelled) this.fling(e.timeStamp)
       this.sink.viewChanged()
     } else if (p.role === 'pinch') {
+      const g = this.pinch
       this.pinch = null
+      // Toque corto con dos dedos casi quietos: deshacer (y la vista vuelve a donde estaba)
+      if (g && !cancelled && e.timeStamp - g.t0 < TAP_MS && g.moved < TAP_MOVE_PX && this.sink.twoFingerTap) {
+        this.sink.vp.cam = { ...g.cam0 }
+        this.sink.twoFingerTap()
+        for (const q of this.ptrs.values()) if (q.role === 'pinch') q.role = 'ignored'
+        this.sink.viewChanged()
+        this.updateCursor()
+        return
+      }
       // El dedo que queda sigue desplazando, sin dibujar
       for (const q of this.ptrs.values()) {
         if (q.role === 'pinch') {
@@ -254,6 +284,10 @@ export class InputController {
       this.sink.viewChanged()
     }
     this.updateCursor()
+  }
+
+  private onLeave = (e: PointerEvent) => {
+    if (e.pointerType !== 'touch' && !this.ptrs.has(e.pointerId)) this.sink.hover?.(null)
   }
 
   private onWheel = (e: WheelEvent) => {
@@ -337,6 +371,10 @@ export class InputController {
     this.pinch = {
       a,
       b,
+      t0: Math.min(pa.t0, pb.t0),
+      cam0: { ...pa.cam0 },
+      mid0: mid,
+      moved: 0,
       anchor: vp.toWorld(mid.x, mid.y),
       d0: Math.max(1, Math.hypot(pa.x - pb.x, pa.y - pb.y)),
       z0: vp.cam.zoom,
@@ -351,6 +389,7 @@ export class InputController {
     if (!pa || !pb) return
     const mid = midpoint(pa, pb)
     const d = Math.max(1, Math.hypot(pa.x - pb.x, pa.y - pb.y))
+    g.moved = Math.max(g.moved, Math.hypot(mid.x - g.mid0.x, mid.y - g.mid0.y) + Math.abs(d - g.d0))
     this.sink.vp.pinchTo(g.anchor, (g.z0 * d) / g.d0, mid.x, mid.y)
     this.sink.viewChanged()
   }

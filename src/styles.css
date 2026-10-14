@@ -406,7 +406,35 @@ a.icon-btn {
   text-overflow: ellipsis;
   white-space: nowrap;
   font-weight: 600;
-  padding-left: 4px;
+  padding: 6px 4px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  text-align: left;
+  cursor: text;
+}
+
+.editor-title:disabled {
+  cursor: default;
+  color: inherit;
+}
+
+.editor-title:not(:disabled):hover {
+  background: var(--surface-2);
+}
+
+.editor-title-input {
+  flex: 1;
+  min-width: 0;
+  font: inherit;
+  font-weight: 600;
+  padding: 6px 8px;
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  user-select: text;
+  -webkit-user-select: text;
 }
 
 .editor-actions {
@@ -420,10 +448,15 @@ a.icon-btn {
   font-variant-numeric: tabular-nums;
 }
 
-.board {
+.board-wrap {
   position: relative;
   flex: 1;
   min-height: 0;
+}
+
+.board {
+  position: absolute;
+  inset: 0;
   overflow: hidden;
   /* El lienzo maneja todos los gestos: sin scroll, zoom ni «tirar para recargar» del navegador */
   touch-action: none;
@@ -493,7 +526,7 @@ a.icon-btn {
 }
 
 /* En el celular, hoja inferior */
-@media (max-width: 520px) {
+@media (max-width: 599px) {
   .panel {
     top: auto;
     left: 0;
@@ -624,4 +657,179 @@ a.icon-btn {
 
 .swatch[aria-pressed='true'] {
   box-shadow: 0 0 0 2px var(--accent);
+}
+
+.icon-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+  background: transparent;
+}
+
+/* ---------- Barra de herramientas ---------- */
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.toolbar-desktop {
+  margin: 0 auto;
+}
+
+.tool-row {
+  display: flex;
+  justify-content: center;
+  padding: 2px 4px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+  touch-action: pan-x;
+  z-index: 2;
+}
+
+.toolbar-tablet {
+  position: absolute;
+  top: 50%;
+  left: calc(10px + var(--safe-left));
+  transform: translateY(-50%);
+  z-index: 3;
+  flex-direction: column;
+  padding: 6px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  box-shadow: var(--shadow);
+  touch-action: manipulation;
+}
+
+.side-right .toolbar-tablet {
+  left: auto;
+  right: calc(10px + var(--safe-right));
+}
+
+.toolbar-sep {
+  width: 1px;
+  height: 24px;
+  margin: 0 4px;
+  background: var(--border);
+}
+
+.toolbar-tablet .toolbar-sep {
+  width: 24px;
+  height: 1px;
+  margin: 4px 0;
+}
+
+.tool-btn {
+  position: relative;
+}
+
+.tool-dot {
+  position: absolute;
+  right: 7px;
+  bottom: 7px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1.5px var(--surface);
+}
+
+.tool-panel-desktop {
+  left: 50%;
+  right: auto;
+  transform: translateX(-50%);
+}
+
+.tool-panel-tablet {
+  top: 50%;
+  left: calc(76px + var(--safe-left));
+  right: auto;
+  transform: translateY(-50%);
+}
+
+.side-right .tool-panel-tablet {
+  left: auto;
+  right: calc(76px + var(--safe-right));
+}
+
+.panel-hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.swatches-wrap {
+  flex-wrap: wrap;
+}
+
+.swatch-custom {
+  position: relative;
+  display: inline-block;
+  background: conic-gradient(red, yellow, lime, cyan, blue, magenta, red);
+}
+
+.swatch-custom.is-custom {
+  box-shadow: 0 0 0 2px var(--accent);
+}
+
+.swatch-custom input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+}
+
+.swatch-small {
+  width: 28px;
+  height: 28px;
+  margin: 0 3px;
+}
+
+.size-chip {
+  display: inline-grid;
+  place-items: center;
+  width: 52px;
+  height: 40px;
+  padding: 0;
+}
+
+.size-chip span {
+  display: block;
+  border-radius: 50%;
+}
+
+/* ---------- Selección del lazo ---------- */
+.selection-bar {
+  position: fixed;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+  touch-action: manipulation;
+}
+
+.color-ring {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: conic-gradient(#1f1d1a 0 20%, #2f5bd3 0 40%, #d0342c 0 60%, #23875a 0 80%, #7b3fc4 0);
+}
+
+.tool-eraser .board {
+  cursor: none;
+}
+
+.tool-lasso .board {
+  cursor: default;
+}
+
+.editor .menu {
+  z-index: 6;
 }
