@@ -10,7 +10,7 @@ import {
   type User,
 } from 'firebase/auth'
 import { create } from 'zustand'
-import { firebaseConfigured, getFirebaseApp } from './app'
+import { firebaseConfig, firebaseConfigured, getFirebaseApp } from './app'
 import { prefersRedirectLogin, readDeviceTraits } from '../lib/device'
 
 export interface SessionUser {
@@ -76,7 +76,7 @@ export async function signInWithGoogle(): Promise<void> {
   if (!auth) return
   useAuth.setState({ busy: true, error: null })
   try {
-    if (prefersRedirectLogin(readDeviceTraits())) {
+    if (prefersRedirectLogin(readDeviceTraits(), location.host === firebaseConfig.authDomain)) {
       await signInWithRedirect(auth, provider()) // navega fuera de la app; no vuelve
       return
     }

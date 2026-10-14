@@ -36,13 +36,24 @@ Hay tres formas, de la más rápida a la más completa.
    - El certificado es autofirmado: aceptá el aviso («Avanzado → Continuar»).
    - Agregá esa IP a los dominios autorizados de Firebase Auth ([docs/FIREBASE.md](docs/FIREBASE.md), paso 4).
    - Con este certificado el navegador **no registra el service worker**, así que no se puede instalar ni probar sin conexión.
-   - En iPhone y iPad el login puede fallar por la protección de cookies de Safari. Para el login usá la opción 3.
+   - El login abre un popup. El redirect solo se usa cuando la app está en el mismo dominio que `authDomain`, que es la opción 3.
 2. **Android por USB** (incluye PWA y modo sin conexión).
    - Activá la depuración USB, conectá el dispositivo y corré `adb reverse tcp:5173 tcp:5173` junto con `npm run dev`.
    - En el dispositivo abrí `http://localhost:5173`: para el navegador es un origen seguro, así que funcionan el service worker, la instalación y el login.
-3. **Firebase Hosting** (la versión real).
-   - Corré `npm run build && firebase deploy --only hosting` y abrí `https://<id>.firebaseapp.com`.
-   - Desde ahí se instala la PWA («Agregar a la pantalla de inicio» o «Instalar app»).
+3. **GitHub Pages o Firebase Hosting** (la versión publicada; ver abajo).
+   - Abrí la URL publicada; desde ahí se instala la PWA («Agregar a la pantalla de inicio» o «Instalar app»).
+
+## Publicar en GitHub Pages
+
+El workflow `.github/workflows/pages.yml` compila y publica en `https://<usuario>.github.io/<repo>/` cada vez que se pushea a `main`. También se puede lanzar a mano desde la pestaña Actions.
+
+Una sola vez:
+
+1. En el repo, **Settings → Pages → Build and deployment → Source: GitHub Actions**.
+2. En **Settings → Secrets and variables → Actions → Variables**, creá las seis variables `VITE_FIREBASE_*` con los mismos valores del `.env`. Son variables, no secretos: igual terminan en el navegador.
+3. En Firebase, agregá `<usuario>.github.io` a los dominios autorizados de Authentication ([docs/FIREBASE.md](docs/FIREBASE.md), paso 4).
+
+En GitHub Pages el login siempre usa **popup**. El redirect no funciona entre dominios distintos (`github.io` y `firebaseapp.com`) por el particionado de almacenamiento de los navegadores. En Chrome de Android y en escritorio el popup anda bien, también en la app instalada. En iPhone y iPad, con la app instalada, puede fallar: ahí conviene Firebase Hosting.
 
 ## Desplegar en Firebase Hosting
 

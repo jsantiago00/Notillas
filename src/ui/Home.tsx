@@ -2,6 +2,7 @@ import { useAuth } from '../firebase/auth'
 import { AccountButton } from './AccountButton'
 import { Icon } from './Icon'
 import { ThemeButton } from './ThemeButton'
+import { LOGO } from '../lib/assets'
 
 export function Home() {
   const user = useAuth((s) => s.user)
@@ -10,7 +11,7 @@ export function Home() {
     <div className="app-shell">
       <header className="topbar">
         <div className="brand">
-          <img src="/logo.svg" alt="" width={28} height={28} />
+          <img src={LOGO} alt="" width={28} height={28} />
           <span>Notillas</span>
         </div>
         <div className="topbar-actions">

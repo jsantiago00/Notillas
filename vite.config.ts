@@ -7,7 +7,11 @@ import { VitePWA } from 'vite-plugin-pwa'
 // `npm run dev:lan` (modo "lan") sirve por HTTPS con un certificado autofirmado para
 // probar desde el celular o la tablet en la red local: Pointer Events y la presión
 // funcionan igual, pero el navegador no registra el service worker con ese certificado.
+// BASE_PATH: ruta donde se sirve la app. "/" en Firebase Hosting; "/Notillas/" en GitHub Pages.
+const base = process.env.BASE_PATH || '/'
+
 export default defineConfig(({ mode }) => ({
+  base,
   plugins: [
     react(),
     mode === 'lan' && basicSsl({ name: 'notillas-lan' }),
@@ -20,8 +24,9 @@ export default defineConfig(({ mode }) => ({
         description: 'Notas a mano alzada con lápiz, sincronizadas entre tus dispositivos.',
         lang: 'es-AR',
         dir: 'ltr',
-        start_url: '/',
-        scope: '/',
+        start_url: base,
+        scope: base,
+        id: base,
         display: 'standalone',
         orientation: 'any',
         background_color: '#f6f3ec',

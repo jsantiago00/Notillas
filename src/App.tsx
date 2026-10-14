@@ -24,7 +24,7 @@ function Gate() {
 
 export function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename={import.meta.env.BASE_URL.replace(/\/$/, '') || undefined}>
       <Gate />
       <UpdatePrompt />
     </BrowserRouter>

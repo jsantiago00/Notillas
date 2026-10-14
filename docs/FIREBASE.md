@@ -39,6 +39,7 @@ Estos valores no son secretos (viajan al navegador de todos modos). Lo que prote
 Están en **Authentication → Configuración → Dominios autorizados**.
 
 - `localhost`, `<id>.firebaseapp.com` y `<id>.web.app` ya vienen cargados.
+- Si publicás en GitHub Pages, **agregá `<usuario>.github.io`** (por ejemplo `clavi-k.github.io`).
 - Para probar desde el celular o la tablet en tu red local, **agregá la IP de tu compu** (por ejemplo `192.168.0.23`, sin puerto ni `https://`). La IP la muestra `npm run dev:lan` al arrancar.
 
 ## 5. Crear Firestore y subir las reglas
@@ -60,7 +61,7 @@ Están en **Authentication → Configuración → Dominios autorizados**.
 
 Las reglas (`firestore.rules`) dejan que cada usuario lea y escriba **solo** lo que está bajo `users/{su uid}`. Para verificarlo, en la consola andá a **Firestore → Reglas → Zona de pruebas**.
 
-## 6. Hosting (para instalar la PWA y probar el login en el celu)
+## 6. Firebase Hosting (opcional: la alternativa a GitHub Pages)
 
 ```sh
 npm run build

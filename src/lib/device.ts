@@ -20,7 +20,13 @@ export function readDeviceTraits(): DeviceTraits {
 /**
  * signInWithPopup falla seguido en la PWA instalada y en navegadores móviles
  * (el popup se abre en otra pestaña o lo bloquean); ahí conviene el redirect.
+ *
+ * Pero el redirect solo funciona si la app se sirve desde el mismo dominio que
+ * `authDomain`: con el particionado de almacenamiento (Chrome 115+, Safari 16.1+,
+ * Firefox 109+) el resultado del redirect se pierde entre dominios distintos.
+ * Fuera de Firebase Hosting (localhost, la red local, GitHub Pages) usamos popup.
  */
-export function prefersRedirectLogin(t: DeviceTraits): boolean {
+export function prefersRedirectLogin(t: DeviceTraits, sameOriginAuth: boolean): boolean {
+  if (!sameOriginAuth) return false
   return t.standalone || t.touchPrimary || t.ipadDesktopUA
 }
